@@ -1,0 +1,5 @@
+{
+  "name": "clean-refactor-no-issues",
+  "diff": "diff --git a/app/format.py b/app/format.py\nindex 4444444..5555555 100644\n--- a/app/format.py\n+++ b/app/format.py\n@@ -1,2 +1,6 @@\n-def fmt(v):\n-    return \"%.2f\" % v\n+def format_score(value: float) -> str:\n+    \"\"\"Format a risk score with two decimals.\"\"\"\n+    return f\"{value:.2f}\"\n+\n+\n+fmt = format_score  # backwards-compatible alias\n",
+  "expected": []
+}

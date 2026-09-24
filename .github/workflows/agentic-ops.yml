@@ -1,0 +1,87 @@
+name: agentic-ops
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  security-events: write
+
+concurrency:
+  group: agentic-ops-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript-typescript
+      - uses: github/codeql-action/analyze@v3
+        with:
+          output: codeql-results
+          upload: always
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: codeql-results
+
+  gate-and-review:
+    name: Quality gate + AI review
+    if: github.event.pull_request.draft == false
+    needs: codeql
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install agentic-ops + scanners
+        run: pip install ".[scanners]"
+      - name: Install JS deps (for ESLint), if present
+        run: if [ -f package-lock.json ]; then npm ci; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: codeql-sarif
+          path: codeql-results
+      - name: Gate, review and post results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_NOTIFY_CHANNEL: ${{ vars.SLACK_NOTIFY_CHANNEL }}
+          AGENTIC_OPS_BOT_LOGIN: github-actions[bot]
+        run: |
+          SARIF_ARGS=""
+          for f in codeql-results/*.sarif; do [ -f "$f" ] && SARIF_ARGS="$SARIF_ARGS --sarif $f"; done
+          agentic-ops ci $SARIF_ARGS
+
+  reviewer-evals:
+    name: Reviewer regression evals
+    # Only when the reviewer itself changes: prompts, parsing, or golden cases.
+    if: contains(github.event.pull_request.labels.*.name, 'run-evals')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ".[dev]"
+      - run: pytest -q
+      - name: Evals (fails on precision/recall regression)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: agentic-ops eval --min-precision 0.6 --min-recall 0.6

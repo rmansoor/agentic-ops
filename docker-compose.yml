@@ -1,0 +1,19 @@
+services:
+  agentic-ops:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      GITHUB_APP_PRIVATE_KEY_PATH: /secrets/github-app.pem
+      AGENTIC_OPS_REPO_DIR: /repo
+    volumes:
+      - ./github-app.pem:/secrets/github-app.pem:ro
+      - ${REPO_TO_INDEX:-.}:/repo:ro
+
+  # Optional local SonarQube: http://localhost:9000 (admin/admin)
+  sonarqube:
+    image: sonarqube:community
+    profiles: ["sonar"]
+    ports:
+      - "9000:9000"

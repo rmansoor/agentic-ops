@@ -1,0 +1,13 @@
+.env
+*.pem
+.venv/
+__pycache__/
+*.egg-info/
+.agentic_ops/
+coverage.json
+.coverage
+vscode-extension/node_modules/
+vscode-extension/out/
+*.vsix
+.DS_Store
+.pytest_cache/

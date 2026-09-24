@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-ops"
+version = "0.1.0"
+description = "AI PR reviewer, quality gates, test generation and codebase-aware agents for GitHub, CI/CD, Slack and VS Code"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.6",
+  "httpx>=0.27",
+  "pyyaml>=6.0",
+  "pyjwt[crypto]>=2.8",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.40"]
+slack = ["slack_bolt>=1.18"]
+scanners = ["ruff>=0.5", "semgrep>=1.80"]
+all = ["openai>=1.40", "slack_bolt>=1.18", "ruff>=0.5", "semgrep>=1.80"]
+dev = ["pytest>=8", "coverage>=7"]
+
+[project.scripts]
+agentic-ops = "agentic_ops.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agentic_ops*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "S", "UP", "I"]
+ignore = ["S101", "S603", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

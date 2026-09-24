@@ -1,0 +1,57 @@
+rules:
+  - id: subprocess-shell-true
+    languages: [python]
+    severity: ERROR
+    message: >-
+      subprocess called with shell=True. If any part of the command comes from user input this is
+      command injection. Pass a list of arguments and drop shell=True.
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+    metadata: {category: security, cwe: "CWE-78"}
+
+  - id: sql-built-with-string-formatting
+    languages: [python]
+    severity: ERROR
+    message: >-
+      SQL built with string formatting. Use parameterized queries (cursor.execute(sql, params)).
+    pattern-either:
+      - pattern: $CUR.execute(f"...", ...)
+      - pattern: $CUR.execute("..." % $X, ...)
+      - pattern: $CUR.execute("...".format(...), ...)
+      - pattern: $CUR.execute("..." + $X, ...)
+    metadata: {category: security, cwe: "CWE-89"}
+
+  - id: llm-system-prompt-from-fstring
+    languages: [python]
+    severity: WARNING
+    message: >-
+      LLM system prompt built with an f-string. Make sure no untrusted input (PR text, user messages,
+      file contents) flows into the system prompt; pass it as delimited user content instead
+      (prompt-injection risk).
+    pattern-either:
+      - pattern: $CLIENT.messages.create(..., system=f"...", ...)
+      - pattern: '{"role": "system", "content": f"..."}'
+    metadata: {category: security, owasp-llm: "LLM01 Prompt Injection"}
+
+  - id: hardcoded-credential
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    message: Possible hard-coded credential. Load secrets from the environment or a secret manager.
+    pattern-regex: (?i)(api[_-]?key|secret|passwd|password|token)\s*[:=]\s*["'][A-Za-z0-9_\-/+]{16,}["']
+    metadata: {category: security, cwe: "CWE-798"}
+
+  - id: js-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: eval() executes arbitrary code. Parse data with JSON.parse or use a safe interpreter.
+    pattern: eval(...)
+    metadata: {category: security, cwe: "CWE-95"}
+
+  - id: requests-without-timeout
+    languages: [python]
+    severity: WARNING
+    message: HTTP call without a timeout can hang workers indefinitely. Pass timeout=...
+    pattern-either:
+      - pattern: requests.$M($URL)
+      - pattern: requests.$M($URL, data=$D)
+      - pattern: requests.$M($URL, json=$D)
+    metadata: {category: reliability}

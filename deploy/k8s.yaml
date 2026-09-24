@@ -1,0 +1,62 @@
+# kubectl create secret generic agentic-ops-secrets --from-env-file=.env --from-file=github-app.pem
+# kubectl apply -f deploy/k8s.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentic-ops
+  labels: {app: agentic-ops}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: agentic-ops}
+  template:
+    metadata:
+      labels: {app: agentic-ops}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: agentic-ops
+          image: ghcr.io/YOUR_ORG/agentic-ops:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef: {name: agentic-ops-secrets}
+          env:
+            - name: GITHUB_APP_PRIVATE_KEY_PATH
+              value: /secrets/github-app.pem
+          volumeMounts:
+            - name: gh-key
+              mountPath: /secrets
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+          livenessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "2", memory: 2Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: gh-key
+          secret:
+            secretName: agentic-ops-secrets
+            items: [{key: github-app.pem, path: github-app.pem}]
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentic-ops
+spec:
+  selector: {app: agentic-ops}
+  ports:
+    - port: 80
+      targetPort: 8080

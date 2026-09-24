@@ -1,0 +1,16 @@
+{
+  "name": "agentic-ops",
+  "url": "https://github.com/YOUR_ORG/agentic-ops",
+  "hook_attributes": {
+    "url": "https://YOUR_HOST/github/webhook"
+  },
+  "public": false,
+  "default_permissions": {
+    "contents": "read",
+    "metadata": "read",
+    "pull_requests": "write",
+    "checks": "write",
+    "issues": "write"
+  },
+  "default_events": ["pull_request"]
+}

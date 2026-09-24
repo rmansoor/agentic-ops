@@ -1,0 +1,7 @@
+{
+  "name": "sql-injection-in-user-lookup",
+  "diff": "diff --git a/app/users.py b/app/users.py\nindex 1111111..2222222 100644\n--- a/app/users.py\n+++ b/app/users.py\n@@ -1,5 +1,11 @@\n import sqlite3\n \n \n def get_conn():\n     return sqlite3.connect(\"app.db\")\n+\n+\n+def find_user(email):\n+    cur = get_conn().cursor()\n+    cur.execute(f\"SELECT id, email FROM users WHERE email = '{email}'\")\n+    return cur.fetchone()\n",
+  "expected": [
+    {"path": "app/users.py", "line": 10, "category": "security"}
+  ]
+}

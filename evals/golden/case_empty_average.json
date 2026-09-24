@@ -1,0 +1,8 @@
+{
+  "name": "zero-division-on-empty-list",
+  "diff": "diff --git a/app/stats.py b/app/stats.py\nnew file mode 100644\nindex 0000000..3333333\n--- /dev/null\n+++ b/app/stats.py\n@@ -0,0 +1,9 @@\n+def average_risk(scores: list[float]) -> float:\n+    \"\"\"Average CVSS score for an asset; assets can have no findings.\"\"\"\n+    return sum(scores) / len(scores)\n+\n+\n+def top_n(scores: list[float], n: int) -> list[float]:\n+    return sorted(scores)[:n]\n+\n+\n",
+  "expected": [
+    {"path": "app/stats.py", "line": 3, "category": "bug"},
+    {"path": "app/stats.py", "line": 7, "category": "bug"}
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "agentic-ops-vscode",
+  "displayName": "Agentic Ops",
+  "description": "AI code review, quality-gate findings and codebase Q&A from the Agentic Ops service",
+  "version": "0.1.0",
+  "publisher": "agentic-ops",
+  "license": "MIT",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Linters", "Other"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "agenticOps.reviewFile", "title": "Agentic Ops: Review Current File" },
+      { "command": "agenticOps.reviewChanges", "title": "Agentic Ops: Review Uncommitted Changes" },
+      { "command": "agenticOps.ask", "title": "Agentic Ops: Ask the Codebase" },
+      { "command": "agenticOps.clear", "title": "Agentic Ops: Clear Findings" }
+    ],
+    "configuration": {
+      "title": "Agentic Ops",
+      "properties": {
+        "agenticOps.serverUrl": { "type": "string", "default": "http://localhost:8080" },
+        "agenticOps.apiToken": { "type": "string", "default": "", "description": "Bearer token (AGENTIC_OPS_API_TOKEN)" },
+        "agenticOps.reviewOnSave": { "type": "boolean", "default": false }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}

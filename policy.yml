@@ -1,0 +1,27 @@
+# Risk-based review policy. Tiers are evaluated top to bottom; the first match wins per file.
+# The PR's tier is its riskiest file. block_on = finding severities that fail the gate in that tier.
+tiers:
+  - name: high
+    paths:
+      - "**/auth/**"
+      - "**/crypto/**"
+      - "**/*secret*"
+      - "**/security/**"
+      - "**/migrations/**"
+      - ".github/workflows/**"
+      - "deploy/**"
+      - "Dockerfile"
+    block_on: [error, warning]
+    require_human_review: true
+
+  - name: low
+    paths:
+      - "docs/**"
+      - "**/*.md"
+      - "**/*.txt"
+    block_on: []
+    auto_approve: true   # only takes effect when AGENTIC_OPS_ALLOW_AUTO_APPROVE=true
+
+default:
+  name: medium
+  block_on: [error]
