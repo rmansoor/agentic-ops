@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ".[dev]" && pip install -r requirements.txt 2>/dev/null || true
+      - run: pip install ".[dev,openai]" && pip install -r requirements.txt 2>/dev/null || true
       - name: Measure coverage
         run: |
           coverage run -m pytest -q || true
@@ -45,6 +45,8 @@ jobs:
       - name: Generate tests (keeps only passing tests)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
         run: agentic-ops testgen ${{ steps.targets.outputs.files }} --coverage coverage.json || true
       - uses: peter-evans/create-pull-request@v6
         with:
