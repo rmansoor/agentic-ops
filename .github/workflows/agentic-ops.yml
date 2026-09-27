@@ -2,7 +2,7 @@ name: agentic-ops
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
 
 permissions:
   contents: read
@@ -11,12 +11,14 @@ permissions:
   security-events: write
 
 concurrency:
-  group: agentic-ops-${{ github.event.pull_request.number }}
+  group: agentic-ops-${{ github.event.pull_request.number }}-${{ github.event.action == 'labeled' && 'labeled' || 'code' }}
   cancel-in-progress: true
 
 jobs:
   codeql:
     name: CodeQL
+    # Labels only trigger evals, not a fresh review.
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +36,7 @@ jobs:
 
   gate-and-review:
     name: Quality gate + AI review
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.event.action != 'labeled'
     needs: codeql
     runs-on: ubuntu-latest
     steps:
