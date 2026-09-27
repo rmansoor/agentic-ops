@@ -59,6 +59,7 @@ Copy `.github/workflows/`, `policy.yml` and `semgrep/` into the target repo and 
 - `agentic-ops.yml`: CodeQL → gate + AI review (check run, inline comments, step summary). An eval job runs when the `run-evals` label is set.
 - `testgen.yml`: runs weekly or on demand, generates tests for the 3 lowest-coverage files and opens a PR.
 - Edit the CodeQL `languages:` line to match your repo.
+- **Java / Maven repos:** use `templates/java/` instead (Java CodeQL build, Java Semgrep rules, Maven-aware `policy.yml`); see `templates/java/README.md`.
 
 ### Git: GitHub App (org-wide, no per-repo workflow)
 1. Create an app from `deploy/github-app-manifest.json`: pull requests (write), checks (write), contents (read), and the `pull_request` event.

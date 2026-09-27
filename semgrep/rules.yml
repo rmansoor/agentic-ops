@@ -33,7 +33,7 @@ rules:
     metadata: {category: security, owasp-llm: "LLM01 Prompt Injection"}
 
   - id: hardcoded-credential
-    languages: [python, javascript, typescript]
+    languages: [python, javascript, typescript, java]
     severity: ERROR
     message: Possible hard-coded credential. Load secrets from the environment or a secret manager.
     pattern-regex: (?i)(api[_-]?key|secret|passwd|password|token)\s*[:=]\s*["'][A-Za-z0-9_\-/+]{16,}["']
@@ -54,4 +54,71 @@ rules:
       - pattern: requests.$M($URL)
       - pattern: requests.$M($URL, data=$D)
       - pattern: requests.$M($URL, json=$D)
+    metadata: {category: reliability}
+
+  # ---- Java ----
+  - id: java-sql-built-with-string-concat
+    languages: [java]
+    severity: ERROR
+    message: >-
+      SQL built with string concatenation or String.format. Use a PreparedStatement with ? placeholders
+      (or named parameters in JPA/JdbcTemplate).
+    patterns:
+      - pattern-either:
+          - pattern: $STMT.$EXEC($Q, ...)
+          - pattern: |
+              String $SQL = $Q;
+              ...
+              $STMT.$EXEC($SQL, ...);
+      # Only JDBC/JPA/JdbcTemplate query methods, so ordinary string building isn't flagged.
+      - metavariable-regex:
+          metavariable: $EXEC
+          regex: ^(execute|executeQuery|executeUpdate|executeLargeUpdate|addBatch|prepareStatement|createQuery|createNativeQuery|query|queryForObject|queryForList|update)$
+      # The query must be built dynamically: a literal glued to something, or String.format.
+      - metavariable-pattern:
+          metavariable: $Q
+          pattern-either:
+            - pattern: '"..." + $X'
+            - pattern: '$X + "..."'
+            - pattern: String.format(...)
+    metadata: {category: security, cwe: "CWE-89"}
+
+  - id: java-command-injection
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Shell command built from a variable. If any part comes from user input this is command injection.
+      Pass a fixed executable and separate arguments to ProcessBuilder.
+    pattern-either:
+      - pattern: Runtime.getRuntime().exec("..." + $X, ...)
+      - pattern: new ProcessBuilder("sh", "-c", $X, ...)
+      - pattern: new ProcessBuilder("bash", "-c", $X, ...)
+      - pattern: new ProcessBuilder("cmd", "/c", $X, ...)
+    metadata: {category: security, cwe: "CWE-78"}
+
+  - id: java-unsafe-deserialization
+    languages: [java]
+    severity: WARNING
+    message: >-
+      Java native deserialization (ObjectInputStream.readObject) of untrusted data can lead to remote code
+      execution. Prefer JSON, or set an ObjectInputFilter allow-list.
+    pattern: (ObjectInputStream $IN).readObject()
+    metadata: {category: security, cwe: "CWE-502"}
+
+  - id: java-weak-hash
+    languages: [java]
+    severity: WARNING
+    message: MD5/SHA-1 are broken for security use. Use SHA-256+, or bcrypt/argon2 for passwords.
+    pattern-either:
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA-1")
+      - pattern: MessageDigest.getInstance("SHA1")
+    metadata: {category: security, cwe: "CWE-328"}
+
+  - id: java-empty-catch
+    languages: [java]
+    severity: WARNING
+    message: Exception silently swallowed. Log it, rethrow it, or comment why ignoring it is safe.
+    pattern: |
+      try { ... } catch ($T $E) { }
     metadata: {category: reliability}

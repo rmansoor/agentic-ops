@@ -1,0 +1,80 @@
+name: agentic-ops
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  security-events: write
+
+concurrency:
+  group: agentic-ops-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "17"   # match your pom.xml <maven.compiler.release>
+  # Pin to a tag or commit SHA for reproducible reviews.
+  AGENTIC_OPS_REF: main
+
+jobs:
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          # Compiling gives CodeQL full type info. If the build needs private repos or services,
+          # switch to `build-mode: none` and delete the Maven step below.
+          build-mode: manual
+      - name: Compile (for CodeQL)
+        run: mvn -B -q -DskipTests compile
+      - uses: github/codeql-action/analyze@v3
+        with:
+          output: codeql-results
+          upload: always
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: codeql-results
+
+  gate-and-review:
+    name: Quality gate + AI review
+    if: github.event.pull_request.draft == false
+    needs: codeql
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install agentic-ops + scanners
+        run: pip install "agentic-ops[scanners,openai] @ git+https://github.com/rmansoor/agentic-ops@${AGENTIC_OPS_REF}"
+      - uses: actions/download-artifact@v4
+        with:
+          name: codeql-sarif
+          path: codeql-results
+      - name: Gate, review and post results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_NOTIFY_CHANNEL: ${{ vars.SLACK_NOTIFY_CHANNEL }}
+          AGENTIC_OPS_BOT_LOGIN: github-actions[bot]
+        run: |
+          SARIF_ARGS=""
+          for f in codeql-results/*.sarif; do [ -f "$f" ] && SARIF_ARGS="$SARIF_ARGS --sarif $f"; done
+          agentic-ops ci $SARIF_ARGS
