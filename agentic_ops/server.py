@@ -93,8 +93,13 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
         if req.diff:
             files = parse_diff(req.diff)
             repo_dir = Path(settings.repo_dir)
+            live = [f for f in files if not f.is_deleted]
             gate = run_gate(
-                repo_dir, [f.path for f in files if not f.is_deleted], Policy.load(settings.policy_path), settings
+                repo_dir,
+                [f.path for f in live],
+                Policy.load(settings.policy_path),
+                settings,
+                added_lines={f.path: f.added_lines for f in live},
             )
         elif req.path and req.content is not None:
             files = [file_as_diff(req.path, req.content)]

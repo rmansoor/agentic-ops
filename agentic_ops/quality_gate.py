@@ -201,7 +201,13 @@ def run_gate(
     policy: Policy,
     settings: Settings,
     sarif_files: list[str] | None = None,
+    added_lines: dict[str, set[int]] | None = None,
 ) -> GateResult:
+    """Run scanners on `changed_files` and apply the policy.
+
+    With `added_lines` (path -> new-file line numbers the change adds) and gate_scope "lines", findings on
+    untouched lines are dropped, so pre-existing issues in a legacy file don't block an unrelated change.
+    """
     root = Path(repo_dir)
     findings: list[Finding] = []
     tools_run: list[str] = []
@@ -220,4 +226,8 @@ def run_gate(
     # Only gate on findings in files this change touched (SonarQube project-level findings have no path).
     changed = set(changed_files)
     findings = [f for f in findings if not f.path or f.path in changed]
+    if added_lines is not None and settings.gate_scope == "lines":
+        findings = [
+            f for f in findings if not f.path or not f.line or f.line in added_lines.get(f.path, set())
+        ]
     return policy.evaluate(changed_files, findings, tools_run)

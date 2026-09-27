@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import shutil
 from pathlib import Path
@@ -119,6 +120,22 @@ def test_real_gate_blocks_shell_true(tmp_path, settings):
     assert "subprocess-shell-true" in rules
     assert gate.blocked
     assert set(gate.tools_run) >= {"ruff", "semgrep"}
+
+
+@pytest.mark.skipif(not shutil.which("semgrep"), reason="semgrep not installed")
+def test_gate_ignores_preexisting_findings_on_untouched_lines(tmp_path, settings):
+    (tmp_path / "semgrep").mkdir()
+    shutil.copy(ROOT / "semgrep" / "rules.yml", tmp_path / "semgrep" / "rules.yml")
+    (tmp_path / "svc.py").write_text(
+        "import subprocess\n\n\ndef run(cmd):\n    return subprocess.run(cmd, shell=True)\n\n\nX = 1\n"
+    )
+    # The change only added line 8; the shell=True on line 5 was already there.
+    assert not run_gate(tmp_path, ["svc.py"], Policy.load(None), settings, added_lines={"svc.py": {8}}).findings
+    # Touching line 5 surfaces it again.
+    assert run_gate(tmp_path, ["svc.py"], Policy.load(None), settings, added_lines={"svc.py": {5}}).blocked
+    # gate_scope="files" keeps the old whole-file behaviour.
+    whole_file = dataclasses.replace(settings, gate_scope="files")
+    assert run_gate(tmp_path, ["svc.py"], Policy.load(None), whole_file, added_lines={"svc.py": {8}}).blocked
 
 
 # ----------------------------------------------------------------------------- llm plumbing

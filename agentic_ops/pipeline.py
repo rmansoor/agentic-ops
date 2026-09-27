@@ -47,7 +47,8 @@ def run_pipeline(
     # The repo's own policy.yml wins; then the service's; then built-in defaults.
     repo_policy = Path(repo_dir) / settings.policy_path
     policy = Policy.load(repo_policy if repo_policy.is_file() else settings.policy_path)
-    gate = run_gate(repo_dir, changed, policy, settings, sarif_files)
+    added = {f.path: f.added_lines for f in files if not f.is_deleted}
+    gate = run_gate(repo_dir, changed, policy, settings, sarif_files, added)
     if use_llm:
         index = CodeIndex.load_or_build(repo_dir)
         review = review_diff(llm, files, gate, index, settings.min_severity, settings.max_comments)

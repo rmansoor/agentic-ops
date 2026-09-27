@@ -37,6 +37,7 @@ def cmd_gate(args, s: Settings) -> int:
         Policy.load(Path(args.repo_dir) / s.policy_path),
         s,
         args.sarif,
+        {f.path: f.added_lines for f in files if not f.is_deleted},
     )
     if args.sarif_out:
         Path(args.sarif_out).write_text(json.dumps(to_sarif(gate.findings), indent=2))

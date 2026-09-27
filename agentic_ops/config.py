@@ -52,6 +52,8 @@ class Settings:
     max_comments: int = 25
     policy_path: str = "policy.yml"
     semgrep_config: str = "semgrep/rules.yml"
+    # "lines": gate only on findings on lines the change adds; "files": anywhere in a touched file.
+    gate_scope: str = "lines"
     # Slack
     slack_bot_token: str | None = None
     slack_signing_secret: str | None = None
@@ -88,6 +90,7 @@ class Settings:
             max_comments=int(_env("AGENTIC_OPS_MAX_COMMENTS", "25") or 25),
             policy_path=_env("AGENTIC_OPS_POLICY", "policy.yml") or "policy.yml",
             semgrep_config=_env("AGENTIC_OPS_SEMGREP_CONFIG", "semgrep/rules.yml") or "semgrep/rules.yml",
+            gate_scope=(_env("AGENTIC_OPS_GATE_SCOPE", "lines") or "lines").lower(),
             slack_bot_token=_env("SLACK_BOT_TOKEN"),
             slack_signing_secret=_env("SLACK_SIGNING_SECRET"),
             slack_notify_channel=_env("SLACK_NOTIFY_CHANNEL"),

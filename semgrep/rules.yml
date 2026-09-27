@@ -36,7 +36,8 @@ rules:
     languages: [python, javascript, typescript, java]
     severity: ERROR
     message: Possible hard-coded credential. Load secrets from the environment or a secret manager.
-    pattern-regex: (?i)(api[_-]?key|secret|passwd|password|token)\s*[:=]\s*["'][A-Za-z0-9_\-/+]{16,}["']
+    # The value must contain a digit: real keys do, attribute/config names like "pre_authentication_token" don't.
+    pattern-regex: (?i)(api[_-]?key|secret|passwd|password|token)\s*[:=]\s*["'](?=[^"']*\d)[A-Za-z0-9_\-/+]{16,}["']
     metadata: {category: security, cwe: "CWE-798"}
 
   - id: js-eval
@@ -61,8 +62,8 @@ rules:
     languages: [java]
     severity: ERROR
     message: >-
-      SQL built with string concatenation or String.format. Use a PreparedStatement with ? placeholders
-      (or named parameters in JPA/JdbcTemplate).
+      Query (SQL, JPQL or JCR/XPath) built with string concatenation or String.format. Use a
+      PreparedStatement with ? placeholders, named parameters (JPA/JdbcTemplate), or JCR bind variables.
     patterns:
       - pattern-either:
           - pattern: $STMT.$EXEC($Q, ...)
@@ -77,10 +78,16 @@ rules:
       # The query must be built dynamically: a literal glued to something, or String.format.
       - metavariable-pattern:
           metavariable: $Q
-          pattern-either:
-            - pattern: '"..." + $X'
-            - pattern: '$X + "..."'
-            - pattern: String.format(...)
+          patterns:
+            - pattern-either:
+                - pattern: '"..." + $X'
+                - pattern: '$X + "..."'
+                - pattern: String.format(...)
+            # Concatenated literals are a constant, not injection.
+            - pattern-not: '"..."'
+            # Don't look inside callbacks such as jcrTemplate.execute(new JcrCallback() { ... }).
+            - pattern-not-inside: 'new $T(...) { ... }'
+            - pattern-not-inside: '(...) -> { ... }'
     metadata: {category: security, cwe: "CWE-89"}
 
   - id: java-command-injection
