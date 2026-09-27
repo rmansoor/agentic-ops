@@ -47,7 +47,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
-        run: agentic-ops testgen ${{ steps.targets.outputs.files }} --coverage coverage.json || true
+        # Some files may be discarded, which is fine; fail only if nothing passed (e.g. bad API key).
+        run: |
+          agentic-ops testgen ${{ steps.targets.outputs.files }} --coverage coverage.json | tee testgen.log || true
+          grep -q '^\[PASS\]' testgen.log || { echo "::error::No generated tests passed; see output above"; exit 1; }
       - uses: peter-evans/create-pull-request@v6
         with:
           branch: agentic-ops/generated-tests
